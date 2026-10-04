@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Pyramid Game</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔺</text></svg>">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --card: #14141f;
+      --accent: #e63946;
+      --gold: #f4a261;
+      --text: #edf2f4;
+      --muted: #8d99ae;
+      --success: #2a9d8f;
+      --border: #1f1f2e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 16px;
+      line-height: 1.5;
+    }
+    .container { max-width: 480px; margin: 0 auto; }
+    h1 { font-size: 1.8rem; text-align: center; margin-bottom: 8px; letter-spacing: -0.5px; }
+    .subtitle { text-align: center; color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+    input, select {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #0d0d14;
+      color: var(--text);
+      font-size: 1rem;
+      margin-bottom: 14px;
+      outline: none;
+    }
+    input:focus { border-color: var(--accent); }
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); margin-top: 10px; }
+    .btn-gold { background: var(--gold); color: #0a0a0f; }
+    .btn-success { background: var(--success); color: white; }
+    .hidden { display: none !important; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .player-list { list-style: none; }
+    .player-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .player-list li:last-child { border-bottom: none; }
+    .rank-badge {
+      display: inline-block;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      text-align: center;
+      line-height: 32px;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+    .rank-A { background: #e9c46a; color: #0a0a0f; }
+    .rank-B { background: #2a9d8f; color: white; }
+    .rank-C { background: #457b9d; color: white; }
+    .rank-D { background: #e76f51; color: white; }
+    .rank-F { background: #e63946; color: white; }
+    .pyramid {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin: 20px 0;
+    }
+    .pyramid-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .pyramid-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      min-width: 90px;
+      text-align: center;
+      font-size: 0.85rem;
+    }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f1f2e;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 0.9rem;
+      z-index: 100;
+      opacity: 0;
+      transition: 0.3s;
+      max-width: 90%;
+      text-align: center;
+    }
+    .toast.show { opacity: 1; }
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .small { font-size: 0.8rem; color: var(--muted); }
+    .danger { color: var(--accent); }
+    .center { text-align: center; }
+    .mt { margin-top: 16px; }
+    .mb { margin-bottom: 16px; }
+    #roomCodeDisplay {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: 4px;
+      text-align: center;
+      color: var(--gold);
+      margin: 12px 0;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- LOADING -->
+    <div id="screen-loading" class="screen active">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Yükleniyor...</p>
+      </div>
+    </div>
+
+    <!-- AUTH -->
+    <div id="screen-auth" class="screen">
+      <h1>🔺 Pyramid Game</h1>
+      <p class="subtitle">Filmdeki gibi sıralama oyunu</p>
+
+      <div class="card">
+        <div id="auth-login">
+          <label>E-posta</label>
+          <input type="email" id="login-email" placeholder="ornek@mail.com">
+          <label>Şifre</label>
+          <input type="password" id="login-pass" placeholder="Şifren">
+          <button class="btn-primary" onclick="doLogin()">Giriş Yap</button>
+          <button class="btn-secondary" onclick="showRegister()">Hesabım yok, Kayıt Ol</button>
+        </div>
+
+        <div id="auth-register" class="hidden">
+          <label>Kullanıcı Adı (görünecek isim)</label>
+          <input type="text" id="reg-name" placeholder="Örn: Su-ji" maxlength="20">
+          <label>E-posta</label>
+          <input type="email" id="reg-email" placeholder="ornek@mail.com">
+          <label>Şifre</label>
+          <input type="password" id="reg-pass" placeholder="En az 6 karakter">
+          <label>Şifre Tekrar</label>
+          <input type="password" id="reg-pass2" placeholder="Tekrar yaz">
+          <button class="btn-primary" onclick="doRegister()">Kayıt Ol</button>
+          <button class="btn-secondary" onclick="showLogin()">Zaten hesabım var</button>
+        </div>
+      </div>
+      <p class="small center">Bu uygulama sadece eğlence amaçlıdır. Gerçek zorbalık yapmayın.</p>
+    </div>
+
+    <!-- LOBBY -->
+    <div id="screen-lobby" class="screen">
+      <div class="header-bar">
+        <div>
+          <strong id="currentUser"></strong>
+          <div class="small">Hoş geldin</div>
+        </div>
+        <button class="btn-secondary" style="width:auto;padding:8px 14px" onclick="logout()">Çıkış</button>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom:14px">Oda Kur</h3>
+        <label>Oda Adı</label>
+        <input type="text" id="create-room-name" placeholder="Örn: Sınıf 2-5" maxlength="30">
+        <label>Oda Şifresi (Rank Şifresi)</label>
+        <input type="text" id="create-room-pass" placeholder="Örn: pyramid2024" maxlength="20">
+        <button class="btn-gold" onclick="createRoom()">Oda Oluştur</button>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom:14px">Odaya Katıl</h3>
+        <label>Oda Kodu</label>
+        <input type="text" id="join-room-code" placeholder="6 haneli kod" maxlength="6" style="text-transform:uppercase;letter-spacing:3px">
+        <label>Oda Şifresi (Rank)</label>
+        <input type="text" id="join-room-pass" placeholder="Oda şifresi">
+        <button class="btn-primary" onclick="joinRoom()">Katıl</button>
+      </div>
+    </div>
+
+    <!-- ROOM -->
+    <div id="screen-room" class="screen">
+      <div class="header-bar">
+        <div>
+          <strong id="roomName"></strong>
+          <div class="small">Oda Kodu: <span id="roomCodeText"></span></div>
+        </div>
+        <button class="btn-secondary" style="width:auto;padding:8px 14px" onclick="leaveRoom()">Ayrıl</button>
+      </div>
+
+      <div class="card center">
+        <div class="small">Oda Kodu</div>
+        <div id="roomCodeDisplay">------</div>
+        <p class="small">Arkadaşlarına bu kodu + Rank şifresini söyle</p>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom:12px">Oyuncular (<span id="playerCount">0</span>)</h3>
+        <ul class="player-list" id="playerList"></ul>
+        <div id="hostControls" class="hidden mt">
+          <button class="btn-success" onclick="startVoting()">Oylamayı Başlat</button>
+        </div>
+      </div>
+
+      <div id="waitingMsg" class="card center hidden">
+        <p>Oylama bekleniyor...</p>
+        <p class="small">Host başlatınca oy kullanabileceksin</p>
+      </div>
+    </div>
+
+    <!-- VOTING -->
+    <div id="screen-vote" class="screen">
+      <h2 class="center mb">Gizli Oylama</h2>
+      <p class="subtitle">En sevdiğin 3 kişiyi seç (1. en yüksek puan)</p>
+
+      <div class="card">
+        <div id="voteOptions"></div>
+        <button class="btn-primary mt" onclick="submitVote()">Oyu Gönder</button>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="screen-results" class="screen">
+      <h2 class="center mb">🔺 Piramit Sıralaması</h2>
+      <div id="pyramidResult" class="pyramid"></div>
+
+      <div class="card">
+        <h3 style="margin-bottom:12px">Detaylı Sıralama</h3>
+        <ul class="player-list" id="rankList"></ul>
+      </div>
+
+      <div id="fPenalty" class="card center hidden">
+        <p class="danger" style="font-weight:700">F Rank Cezası</p>
+        <p id="penaltyText" style="font-size:1.1rem;margin:12px 0"></p>
+      </div>
+
+      <button class="btn-primary" onclick="backToRoom()">Odaya Dön</button>
+      <button class="btn-secondary" id="btnNewRound" onclick="newRound()">Yeni Tur Başlat</button>
+    </div>
+
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    // ============================================
+    // 🔥 FIREBASE CONFIG - BURAYA KENDİ BİLGİLERİNİ YAZ
+    // ============================================
+    const firebaseConfig = {
+      apiKey: "BURAYA_API_KEY",
+      authDomain: "BURAYA_AUTH_DOMAIN",
+      projectId: "BURAYA_PROJECT_ID",
+      storageBucket: "BURAYA_STORAGE_BUCKET",
+      messagingSenderId: "BURAYA_MESSAGING_SENDER_ID",
+      appId: "BURAYA_APP_ID"
+    };
+    // ============================================
+
+    // Firebase başlat
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // State
+    let currentUser = null;
+    let currentRoomId = null;
+    let isHost = false;
+    let roomUnsub = null;
+
+    // ========== UI HELPERS ==========
+    function showScreen(name) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('screen-' + name).classList.add('active');
+    }
+
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2800);
+    }
+
+    function showRegister() {
+      document.getElementById('auth-login').classList.add('hidden');
+      document.getElementById('auth-register').classList.remove('hidden');
+    }
+    function showLogin() {
+      document.getElementById('auth-register').classList.add('hidden');
+      document.getElementById('auth-login').classList.remove('hidden');
+    }
+
+    // ========== AUTH ==========
+    async function doRegister() {
+      const name = document.getElementById('reg-name').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const pass = document.getElementById('reg-pass').value;
+      const pass2 = document.getElementById('reg-pass2').value;
+
+      if (!name || name.length < 2) return toast('Kullanıcı adı en az 2 karakter olmalı');
+      if (!email) return toast('E-posta gerekli');
+      if (!pass || pass.length < 6) return toast('Şifre en az 6 karakter olmalı');
+      if (pass !== pass2) return toast('Şifreler uyuşmuyor');
+
+      try {
+        const cred = await auth.createUserWithEmailAndPassword(email, pass);
+        await cred.user.updateProfile({ displayName: name });
+        await db.collection('users').doc(cred.user.uid).set({
+          displayName: name,
+          email: email,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        toast('Kayıt başarılı!');
+      } catch (e) {
+        console.error(e);
+        if (e.code === 'auth/email-already-in-use') toast('Bu e-posta zaten kayıtlı');
+        else if (e.code === 'auth/invalid-email') toast('Geçersiz e-posta');
+        else if (e.code === 'auth/weak-password') toast('Şifre çok zayıf');
+        else toast('Kayıt hatası: ' + e.message);
+      }
+    }
+
+    async function doLogin() {
+      const email = document.getElementById('login-email').value.trim();
+      const pass = document.getElementById('login-pass').value;
+      if (!email || !pass) return toast('E-posta ve şifre gir');
+
+      try {
+        await auth.signInWithEmailAndPassword(email, pass);
+      } catch (e) {
+        console.error(e);
+        if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+          toast('E-posta veya şifre yanlış');
+        } else {
+          toast('Giriş hatası: ' + e.message);
+        }
+      }
+    }
+
+    async function logout() {
+      if (roomUnsub) { roomUnsub(); roomUnsub = null; }
+      currentRoomId = null;
+      await auth.signOut();
+    }
+
+    // Auth state listener
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        currentUser = {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || user.email.split('@')[0]
+        };
+        document.getElementById('currentUser').textContent = currentUser.displayName;
+        showScreen('lobby');
+      } else {
+        currentUser = null;
+        showScreen('auth');
+      }
+    });
+
+    // ========== ROOM ==========
+    function generateCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      return code;
+    }
+
+    async function createRoom() {
+      const name = document.getElementById('create-room-name').value.trim() || 'Pyramid Room';
+      const pass = document.getElementById('create-room-pass').value.trim();
+      if (!pass) return toast('Oda şifresi (Rank) gerekli');
+
+      const code = generateCode();
+      try {
+        await db.collection('rooms').doc(code).set({
+          code,
+          name,
+          pass,
+          hostUid: currentUser.uid,
+          hostName: currentUser.displayName,
+          players: [{
+            uid: currentUser.uid,
+            name: currentUser.displayName
+          }],
+          votes: {},
+          status: 'waiting',
+          ranking: null,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        currentRoomId = code;
+        isHost = true;
+        listenToRoom(code);
+        toast('Oda oluşturuldu!');
+      } catch (e) {
+        console.error(e);
+        toast('Oda oluşturulamadı: ' + e.message);
+      }
+    }
+
+    async function joinRoom() {
+      const code = document.getElementById('join-room-code').value.trim().toUpperCase();
+      const pass = document.getElementById('join-room-pass').value.trim();
+      if (!code || code.length !== 6) return toast('6 haneli oda kodu gir');
+
+      try {
+        const doc = await db.collection('rooms').doc(code).get();
+        if (!doc.exists) return toast('Oda bulunamadı');
+
+        const room = doc.data();
+        if (room.pass !== pass) return toast('Oda şifresi (Rank) yanlış');
+
+        const already = room.players.some(p => p.uid === currentUser.uid);
+        if (!already) {
+          await db.collection('rooms').doc(code).update({
+            players: firebase.firestore.FieldValue.arrayUnion({
+              uid: currentUser.uid,
+              name: currentUser.displayName
+            })
+          });
+        }
+
+        currentRoomId = code;
+        isHost = room.hostUid === currentUser.uid;
+        listenToRoom(code);
+        toast('Odaya katıldın!');
+      } catch (e) {
+        console.error(e);
+        toast('Katılamadı: ' + e.message);
+      }
+    }
+
+    function listenToRoom(code) {
+      if (roomUnsub) roomUnsub();
+
+      roomUnsub = db.collection('rooms').doc(code).onSnapshot((doc) => {
+        if (!doc.exists) {
+          toast('Oda silindi');
+          leaveRoom();
+          return;
+        }
+        const room = doc.data();
+        renderRoom(room);
+      }, (err) => {
+        console.error(err);
+        toast('Bağlantı hatası');
+      });
+    }
+
+    function renderRoom(room) {
+      document.getElementById('roomName').textContent = room.name;
+      document.getElementById('roomCodeText').textContent = room.code;
+      document.getElementById('roomCodeDisplay').textContent = room.code;
+
+      const list = document.getElementById('playerList');
+      list.innerHTML = (room.players || []).map(p => {
+        const voted = room.votes && room.votes[p.uid];
+        return `
+          <li>
+            <span>${p.name} ${p.uid === room.hostUid ? '<span class="small">(Host)</span>' : ''}</span>
+            <span class="small">${voted ? '✓ Oy verdi' : ''}</span>
+          </li>
+        `;
+      }).join('');
+      document.getElementById('playerCount').textContent = (room.players || []).length;
+
+      isHost = room.hostUid === currentUser.uid;
+      document.getElementById('hostControls').classList.toggle('hidden', !isHost || room.status !== 'waiting');
+      document.getElementById('waitingMsg').classList.toggle('hidden', isHost || room.status !== 'waiting');
+      document.getElementById('btnNewRound').classList.toggle('hidden', !isHost);
+
+      if (room.status === 'voting') {
+        const alreadyVoted = room.votes && room.votes[currentUser.uid];
+        if (!alreadyVoted) {
+          showScreen('vote');
+          renderVoteOptions(room);
+        } else {
+          showScreen('room');
+          document.getElementById('waitingMsg').classList.remove('hidden');
+          document.getElementById('waitingMsg').innerHTML = '<p>Oyların toplanmasını bekliyoruz...</p><p class="small">Herkes oy verince sonuçlar çıkacak</p>';
+        }
+      } else if (room.status === 'results') {
+        showResults(room);
+      } else {
+        showScreen('room');
+      }
+    }
+
+    async function leaveRoom() {
+      if (roomUnsub) { roomUnsub(); roomUnsub = null; }
+
+      if (currentRoomId && currentUser) {
+        try {
+          const ref = db.collection('rooms').doc(currentRoomId);
+          const doc = await ref.get();
+          if (doc.exists) {
+            const room = doc.data();
+            const newPlayers = (room.players || []).filter(p => p.uid !== currentUser.uid);
+            if (newPlayers.length === 0) {
+              await ref.delete();
+            } else {
+              await ref.update({ players: newPlayers });
+            }
+          }
+        } catch (e) { console.error(e); }
+      }
+
+      currentRoomId = null;
+      isHost = false;
+      showScreen('lobby');
+    }
+
+    // ========== VOTING ==========
+    async function startVoting() {
+      if (!currentRoomId) return;
+      try {
+        const ref = db.collection('rooms').doc(currentRoomId);
+        const doc = await ref.get();
+        const room = doc.data();
+        if ((room.players || []).length < 3) return toast('En az 3 oyuncu gerekli');
+
+        await ref.update({
+          status: 'voting',
+          votes: {},
+          ranking: null
+        });
+        toast('Oylama başladı!');
+      } catch (e) {
+        console.error(e);
+        toast('Başlatılamadı');
+      }
+    }
+
+    function renderVoteOptions(room) {
+      const others = (room.players || []).filter(p => p.uid !== currentUser.uid);
+      const container = document.getElementById('voteOptions');
+      container.innerHTML = `
+        <p class="small mb">1. sıraya en sevdiğini koy (3 puan)</p>
+        ${[1,2,3].map(n => `
+          <label>Seçim ${n}</label>
+          <select id="vote-${n}">
+            <option value="">-- Seç --</option>
+            ${others.map(p => `<option value="${p.uid}">${p.name}</option>`).join('')}
+          </select>
+        `).join('')}
+      `;
+    }
+
+    async function submitVote() {
+      const v1 = document.getElementById('vote-1').value;
+      const v2 = document.getElementById('vote-2').value;
+      const v3 = document.getElementById('vote-3').value;
+      if (!v1) return toast('En az 1. seçimi yapmalısın');
+
+      const picks = [v1, v2, v3].filter(Boolean);
+      if (new Set(picks).size !== picks.length) return toast('Aynı kişiyi birden fazla seçemezsin');
+
+      try {
+        const ref = db.collection('rooms').doc(currentRoomId);
+        await ref.update({
+          [`votes.${currentUser.uid}`]: picks
+        });
+
+        toast('Oyun gönderildi!');
+
+        const doc = await ref.get();
+        const room = doc.data();
+        const playerCount = (room.players || []).length;
+        const voteCount = Object.keys(room.votes || {}).length;
+
+        if (voteCount >= playerCount) {
+          await calculateRanking(room);
+        }
+      } catch (e) {
+        console.error(e);
+        toast('Oy gönderilemedi');
+      }
+    }
+
+    async function calculateRanking(room) {
+      const scores = {};
+      (room.players || []).forEach(p => scores[p.uid] = { name: p.name, score: 0 });
+
+      Object.values(room.votes || {}).forEach(picks => {
+        if (picks[0] && scores[picks[0]]) scores[picks[0]].score += 3;
+        if (picks[1] && scores[picks[1]]) scores[picks[1]].score += 2;
+        if (picks[2] && scores[picks[2]]) scores[picks[2]].score += 1;
+      });
+
+      const sorted = Object.entries(scores).sort((a, b) => b[1].score - a[1].score);
+
+      const ranking = sorted.map((item, i) => {
+        let rank;
+        if (i === 0) rank = 'A';
+        else if (i === sorted.length - 1) rank = 'F';
+        else if (i === 1) rank = 'B';
+        else if (i === 2) rank = 'C';
+        else rank = 'D';
+        return { uid: item[0], name: item[1].name, score: item[1].score, rank };
+      });
+
+      await db.collection('rooms').doc(currentRoomId).update({
+        ranking,
+        status: 'results'
+      });
+    }
+
+    function showResults(room) {
+      const ranking = room.ranking || [];
+      const pyramid = document.getElementById('pyramidResult');
+      const list = document.getElementById('rankList');
+
+      const byRank = { A: [], B: [], C: [], D: [], F: [] };
+      ranking.forEach(r => byRank[r.rank].push(r.name));
+
+      pyramid.innerHTML = `
+        <div class="pyramid-row">${byRank.A.map(n => `<div class="pyramid-item rank-A"><strong>A</strong><br>${n}</div>`).join('')}</div>
+        <div class="pyramid-row">${byRank.B.map(n => `<div class="pyramid-item rank-B"><strong>B</strong><br>${n}</div>`).join('')}</div>
+        <div class="pyramid-row">${byRank.C.map(n => `<div class="pyramid-item rank-C"><strong>C</strong><br>${n}</div>`).join('')}</div>
+        <div class="pyramid-row">${byRank.D.map(n => `<div class="pyramid-item rank-D"><strong>D</strong><br>${n}</div>`).join('')}</div>
+        <div class="pyramid-row">${byRank.F.map(n => `<div class="pyramid-item rank-F"><strong>F</strong><br>${n}</div>`).join('')}</div>
+      `;
+
+      list.innerHTML = ranking.map(r => `
+        <li>
+          <span><span class="rank-badge rank-${r.rank}">${r.rank}</span> &nbsp; ${r.name}</span>
+          <span class="small">${r.score} puan</span>
+        </li>
+      `).join('');
+
+      const fPlayer = ranking.find(r => r.rank === 'F');
+      if (fPlayer) {
+        const penalties = [
+          'Bir tur boyunca sadece fısıltıyla konuşacak',
+          'En sevdiği şarkıyı söyleyecek',
+          'Diğerlerine çay/kahve ısmarlayacak (şaka)',
+          '30 saniye dans edecek',
+          'En utanç verici anısını anlatacak',
+          'Bir tur boyunca "F" diye hitap edilecek'
+        ];
+        document.getElementById('fPenalty').classList.remove('hidden');
+        document.getElementById('penaltyText').textContent = `${fPlayer.name}: ${penalties[Math.floor(Math.random() * penalties.length)]}`;
+      } else {
+        document.getElementById('fPenalty').classList.add('hidden');
+      }
+
+      showScreen('results');
+    }
+
+    async function backToRoom() {
+      if (!currentRoomId || !isHost) return;
+      await db.collection('rooms').doc(currentRoomId).update({
+        status: 'waiting',
+        votes: {},
+        ranking: null
+      });
+    }
+
+    async function newRound() {
+      if (!isHost) return;
+      await backToRoom();
+      setTimeout(() => startVoting(), 600);
+    }
+
+    // İlk yükleme
+    showScreen('loading');
+  </script>
+</body>
+</html>
